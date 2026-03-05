@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>ぷよぷよ対戦</title>
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -87,6 +87,71 @@ h1 { font-size: 1.5rem; color: #F59E0B; }
   gap: 16px; z-index: 100;
 }
 .gameover-overlay h2 { font-size: 2rem; color: #F59E0B; }
+
+/* Touch controls */
+.touch-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  max-width: 360px;
+  padding: 8px;
+}
+.touch-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.touch-btn {
+  min-width: 70px;
+  min-height: 60px;
+  border-radius: 10px;
+  border: none;
+  background: #374151;
+  color: #F9FAFB;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+.touch-btn:active { background: #4B5563; }
+.touch-btn.wide { min-width: 120px; }
+
+/* Responsive layout for mobile */
+@media (max-width: 600px) {
+  body { padding: 8px; }
+
+  .game-area {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  /* Opponent board: small, on top */
+  .op-side { order: -1; }
+
+  /* My board: larger cells using vw */
+  .board-grid {
+    grid-template-columns: repeat(6, calc((100vw - 80px) / 6));
+    grid-template-rows: repeat(12, calc((100vw - 80px) / 6));
+  }
+  .board-cell {
+    width: calc((100vw - 80px) / 6);
+    height: calc((100vw - 80px) / 6);
+  }
+  .next-cell {
+    width: 22px;
+    height: 22px;
+  }
+}
 
 /* Controls help */
 .controls-panel {
@@ -195,6 +260,40 @@ h1 { font-size: 1.5rem; color: #F59E0B; }
       <div class="ojama-bar">
         <div v-for="i in opponentOjamaIcons" :key="i" class="ojama-icon" style="background:#EF4444;"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Touch controls (mobile) -->
+  <div v-if="joined && ['PLAYING','LOCKING'].includes(phase)" class="touch-controls">
+    <div class="touch-row">
+      <button class="touch-btn"
+        @touchstart.prevent="rotateCCW()"
+        @mousedown.prevent="rotateCCW()">↺</button>
+      <button class="touch-btn"
+        @touchstart.prevent="rotateCW()"
+        @mousedown.prevent="rotateCW()">↻</button>
+    </div>
+    <div class="touch-row">
+      <button class="touch-btn"
+        @touchstart.prevent="tryMoveLeft(); startDAS('left')"
+        @touchend.prevent="stopDAS()"
+        @mousedown.prevent="tryMoveLeft(); startDAS('left')"
+        @mouseup.prevent="stopDAS()">←</button>
+      <button class="touch-btn"
+        @touchstart.prevent="softDropActive=true; fallTimer=1"
+        @touchend.prevent="softDropActive=false; fallTimer=getFallSpeed()"
+        @mousedown.prevent="softDropActive=true; fallTimer=1"
+        @mouseup.prevent="softDropActive=false; fallTimer=getFallSpeed()">↓</button>
+      <button class="touch-btn"
+        @touchstart.prevent="tryMoveRight(); startDAS('right')"
+        @touchend.prevent="stopDAS()"
+        @mousedown.prevent="tryMoveRight(); startDAS('right')"
+        @mouseup.prevent="stopDAS()">→</button>
+    </div>
+    <div class="touch-row">
+      <button class="touch-btn wide"
+        @touchstart.prevent="hardDrop()"
+        @mousedown.prevent="hardDrop()">▼ ハードドロップ</button>
     </div>
   </div>
 
