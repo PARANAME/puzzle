@@ -92,20 +92,21 @@ h1 { font-size: 1.5rem; color: #F59E0B; }
 .touch-controls {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   align-items: center;
   width: 100%;
   max-width: 360px;
-  padding: 8px;
+  padding: 4px 8px;
 }
 .touch-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: center;
+  width: 100%;
 }
 .touch-btn {
-  min-width: 70px;
-  min-height: 60px;
+  min-width: 60px;
+  min-height: 50px;
   border-radius: 10px;
   border: none;
   background: #374151;
@@ -122,35 +123,59 @@ h1 { font-size: 1.5rem; color: #F59E0B; }
   flex: 1;
 }
 .touch-btn:active { background: #4B5563; }
-.touch-btn.wide { min-width: 120px; }
+.touch-btn.wide { min-width: 100px; }
 
 /* Responsive layout for mobile */
 @media (max-width: 600px) {
-  body { padding: 8px; }
+  /* 1画面に収める */
+  body {
+    padding: 4px;
+    height: 100dvh;
+    overflow: hidden;
+    align-items: stretch;
+  }
 
+  #app { gap: 4px; height: 100%; justify-content: flex-start; }
+
+  h1 { font-size: 1.1rem; }
+
+  /* ゲームエリアは横並び（自分左・相手右）、縦方向に伸縮 */
   .game-area {
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 6px;
+    flex: 1;
+    min-height: 0;
     width: 100%;
   }
 
-  /* Opponent board: small, on top */
-  .op-side { order: -1; }
+  .my-side { flex: 1; min-width: 0; align-items: flex-start; }
 
-  /* My board: larger cells using vw */
+  /* セルサイズ：画面幅と高さの両方で制約 */
+  /* 幅: (100vw - 相手ボード幅~128px - NEXTパネル~36px - 余白~20px) / 6 */
+  /* 高: (100dvh - ヘッダ~32px - 情報行~26px - タッチUI~170px - 余白~24px) / 12 */
   .board-grid {
-    grid-template-columns: repeat(6, calc((100vw - 80px) / 6));
-    grid-template-rows: repeat(12, calc((100vw - 80px) / 6));
+    --cell: min(
+      calc((100vw - 184px) / 6),
+      calc((100dvh - 252px) / 12)
+    );
+    grid-template-columns: repeat(6, var(--cell));
+    grid-template-rows: repeat(12, var(--cell));
   }
   .board-cell {
-    width: calc((100vw - 80px) / 6);
-    height: calc((100vw - 80px) / 6);
+    width: var(--cell);
+    height: var(--cell);
   }
-  .next-cell {
-    width: 22px;
-    height: 22px;
-  }
+  .next-cell { width: 20px; height: 20px; }
+
+  .info-row { font-size: 0.78rem; }
+  .ojama-bar { max-width: 100%; }
+
+  /* 相手ボードは右側に固定、小さいまま */
+  .op-side { flex-shrink: 0; order: 0; }
+
+  /* キーボード操作説明は非表示 */
+  .controls-panel { display: none; }
 }
 
 /* Controls help */
