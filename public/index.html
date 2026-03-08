@@ -206,11 +206,10 @@ h1 { font-size: 1.5rem; color: #F59E0B; }
 <div id="app">
   <h1>ぷよぷよ対戦</h1>
 
-  <!-- Lobby -->
-  <div v-if="!joined" class="lobby">
-    <input v-model="myName" placeholder="名前を入力" maxlength="12" />
-    <input v-model="roomInput" placeholder="ルーム名 (空白=default)" maxlength="20" />
-    <button class="btn btn-green" @click="joinRoom">入室</button>
+  <!-- Lobby: step 1 - mode selection -->
+  <div v-if="gameMode === null && !joined" class="lobby">
+    <button class="btn btn-green" style="min-width:160px;" @click="gameMode = 'solo'">一人で遊ぶ</button>
+    <button class="btn btn-blue" style="min-width:160px;" @click="gameMode = 'versus'">二人対戦</button>
     <div class="controls-panel" style="margin-top:8px;">
       <h3>操作方法</h3>
       <div class="controls-row"><span><span class="key-badge">←</span> <span class="key-badge">→</span></span><span>左右移動</span></div>
@@ -221,8 +220,23 @@ h1 { font-size: 1.5rem; color: #F59E0B; }
     </div>
   </div>
 
-  <!-- Waiting room -->
-  <div v-if="joined && phase === 'WAITING'" class="status-panel">
+  <!-- Lobby: step 2 - solo form -->
+  <div v-if="gameMode === 'solo' && !joined" class="lobby">
+    <input v-model="myName" placeholder="名前を入力" maxlength="12" />
+    <button class="btn btn-green" @click="startSoloGame">スタート</button>
+    <button class="btn" style="background:#4B5563;color:#fff;" @click="gameMode = null">← 戻る</button>
+  </div>
+
+  <!-- Lobby: step 3 - versus form -->
+  <div v-if="gameMode === 'versus' && !joined" class="lobby">
+    <input v-model="myName" placeholder="名前を入力" maxlength="12" />
+    <input v-model="roomInput" placeholder="ルーム名 (空白=default)" maxlength="20" />
+    <button class="btn btn-green" @click="joinRoom">入室</button>
+    <button class="btn" style="background:#4B5563;color:#fff;" @click="gameMode = null">← 戻る</button>
+  </div>
+
+  <!-- Waiting room (versus only) -->
+  <div v-if="joined && phase === 'WAITING' && gameMode === 'versus'" class="status-panel">
     <h2>ルーム: {{ room }}</h2>
     <div class="players-list">
       <div v-for="(p, id) in serverState.players" :key="id" class="player-row">
@@ -262,13 +276,13 @@ h1 { font-size: 1.5rem; color: #F59E0B; }
         <span>スコア: {{ score }}</span>
         <span>連鎖: {{ chainCount }}</span>
       </div>
-      <div class="ojama-bar">
+      <div v-if="gameMode === 'versus'" class="ojama-bar">
         <div v-for="i in ojamaIcons" :key="i" class="ojama-icon"></div>
       </div>
     </div>
 
-    <!-- Opponent side -->
-    <div class="op-side">
+    <!-- Opponent side (versus only) -->
+    <div v-if="gameMode === 'versus'" class="op-side">
       <div class="player-name">{{ opponentName || '相手待ち' }}</div>
       <div class="op-board-grid">
         <div
@@ -369,6 +383,7 @@ createApp({
   data() {
     return {
       // Lobby
+      gameMode: null,
       myName: "Player",
       roomInput: "",
       joined: false,
@@ -507,6 +522,12 @@ createApp({
       });
     },
 
+    startSoloGame() {
+      this.joined = true;
+      const seed = Math.floor(Math.random() * 2147483647);
+      this.startGame(seed);
+    },
+
     joinRoom() {
       this.room = this.roomInput.trim() || (window.location.hash.slice(1) || "default");
       this.joined = true;
@@ -518,7 +539,13 @@ createApp({
     },
 
     clickRestart() {
-      this.socket.emit("restart", { room: this.room });
+      if (this.gameMode === 'solo') {
+        this.resetGame();
+        const seed = Math.floor(Math.random() * 2147483647);
+        this.startGame(seed);
+      } else {
+        this.socket.emit("restart", { room: this.room });
+      }
     },
 
     // ===== Game init =====
@@ -956,6 +983,7 @@ createApp({
     },
 
     sendAccumulatedOjama() {
+      if (this.gameMode !== 'versus') return;
       const queued = this.ojamaQueued;
       const received = this.ojamaReceived;
       const net = queued - received;
@@ -981,11 +1009,14 @@ createApp({
       this.gameOverMessage = "ゲームオーバー 😢";
       this.stopGameLoop();
       this.tsumo = null;
-      this.socket.emit("game_over", { room: this.room });
+      if (this.gameMode === 'versus') {
+        this.socket.emit("game_over", { room: this.room });
+      }
     },
 
     // ===== Board update emit =====
     sendBoardUpdate() {
+      if (this.gameMode !== 'versus') return;
       this.socket.emit("board_update", {
         room: this.room,
         board: this.board,
